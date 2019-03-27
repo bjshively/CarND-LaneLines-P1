@@ -1,56 +1,45 @@
 # **Finding Lane Lines on the Road** 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
-<img src="examples/laneLines_thirdPass.jpg" width="480" alt="Combined Image" />
+[//]: # (Image References)
 
-Overview
+[result]: ./test_images_output/whiteCarLaneSwitch.jpg "Result"
+
 ---
 
-When we drive, we use our eyes to decide where to go.  The lines on the road that show us where the lanes are act as our constant reference for where to steer the vehicle.  Naturally, one of the first things we would like to do in developing a self-driving car is to automatically detect lane lines using an algorithm.
+## Reflection
 
-In this project you will detect lane lines in images using Python and OpenCV.  OpenCV means "Open-Source Computer Vision", which is a package that has many useful tools for analyzing images.  
+### Pipeline Description
 
-To complete the project, two files will be submitted: a file containing project code and a file containing a brief write up explaining your solution. We have included template files to be used both for the [code](https://github.com/udacity/CarND-LaneLines-P1/blob/master/P1.ipynb) and the [writeup](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md).The code file is called P1.ipynb and the writeup template is writeup_template.md 
+My pipeline consists of the following operations:
 
-To meet specifications in the project, take a look at the requirements in the [project rubric](https://review.udacity.com/#!/rubrics/322/view)
+- Convert the input image to grayscale
+- Detect edges using Canny edge finding
+- Apply a mask to the image so that only a region of interest remains
+- Apply Hough transformation to identify most significant lines within the image
+- Draw the lines identified via Hough transformation on top of the original input image
 
+### `draw_lines()` Improvements
 
-Creating a Great Writeup
----
-For this project, a great writeup should provide a detailed response to the "Reflection" section of the [project rubric](https://review.udacity.com/#!/rubrics/322/view). There are three parts to the reflection:
+The original `draw_lines()` function would directly draw the exact lines detected by the pipeline. In order to draw lane lines that cover the majority of the image, some enhancements were required.
 
-1. Describe the pipeline
+First, for each line segment identified, I calculated the slope. Lines corresponding to the left side of the road would tend to have a positive slope (up and to the right), but in cv2 the coordinate plane is inverted with the top left corner corresponding to (0, 0). Therefore, our left lines tend to have a negative slope. Using this same logic, lines associated with the right side of the road tend to have a positive slope.
 
-2. Identify any shortcomings
+Based on the slope determination, each line is added to either a leftline or rightline list. Once all lines have been classified, the numpy `polyfit` and `poly1d` functions are used to create two regression functions that can be used to extrapolate points on the left and right lines.
 
-3. Suggest possible improvements
+Last, we use these two regression functions to plot lines from points in the bottom corners of the image up towards the center, roughly corresponding to the region of interest as masked within our pipeline.
 
-We encourage using images in your writeup to demonstrate how your pipeline works.  
+The result looks like this:
 
-All that said, please be concise!  We're not looking for you to write a book here: just a brief description.
+![Pipeline output with full lane lines][result]
 
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup. Here is a link to a [writeup template file](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md). 
+### Pipeline Shortcomings
 
+One shortcoming with the pipeline as implemented is that occasionally it will fail to detect a line in an image or video frame, or in the video case, the lines detected in consecutive frames will have noticeably difference slopes. This results in the lines blinking on/off of the image, or jittering back and forth as the slope changes.
 
-The Project
----
+Another shortcoming is that the pipeline is currently overfitted to the specific dimensions and other characteristics of the input data. It uses a hardcoded region of interest and could therefore easily fail to identify lines accurately if the camera position is altered or even if the vehicle was in the process of making a lane change or other legal maneuver that placed the lines elsewhere in the frame.
 
-## If you have already installed the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) you should be good to go!   If not, you should install the starter kit to get started on this project. ##
+### Possible Pipeline Improvements
 
-**Step 1:** Set up the [CarND Term1 Starter Kit](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/83ec35ee-1e02-48a5-bdb7-d244bd47c2dc/lessons/8c82408b-a217-4d09-b81d-1bda4c6380ef/concepts/4f1870e0-3849-43e4-b670-12e6f2d4b7a7) if you haven't already.
+A possible improvement would be to accumulate data over multiple frames as they are fed into the pipeline, and then to aggregate/average data. This would smooth out changes in the slope of the line being drawn over time, and would reduce the jitter effect that can sometimes be seen as the pipeline detects different edges frame to frame. It's important to note that too much aggregation of data could result in lane changes becoming sluggish or entirely unresponsive, which could be dangerous if a lane turns sharply.
 
-**Step 2:** Open the code in a Jupyter Notebook
-
-You will complete the project code in a Jupyter notebook.  If you are unfamiliar with Jupyter Notebooks, check out [Udacity's free course on Anaconda and Jupyter Notebooks](https://classroom.udacity.com/courses/ud1111) to get started.
-
-Jupyter is an Ipython notebook where you can run blocks of code and see results interactively.  All the code for this project is contained in a Jupyter notebook. To start Jupyter in your browser, use terminal to navigate to your project directory and then run the following command at the terminal prompt (be sure you've activated your Python 3 carnd-term1 environment as described in the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) installation instructions!):
-
-`> jupyter notebook`
-
-A browser window will appear showing the contents of the current directory.  Click on the file called "P1.ipynb".  Another browser window will appear displaying the notebook.  Follow the instructions in the notebook to complete the project.  
-
-**Step 3:** Complete the project and submit both the Ipython notebook and the project writeup
-
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
-
+Another potential improvement could be to dynamically adjust the vertices of the region of interest based on the density of edges detected in the Canny edge detection step. This would allow the pipeline to handle a wider variety of images by detecting which portions of the image might contain features of interest.
