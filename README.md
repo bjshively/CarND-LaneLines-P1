@@ -40,6 +40,6 @@ Another shortcoming is that the pipeline is currently overfitted to the specific
 
 ### Possible Pipeline Improvements
 
-A possible improvement would be to accumulate data over multiple frames as they are fed into the pipeline, and then to aggregate/average data. This would smooth out changes in the slope of the line being drawn over time, and would reduce the jitter effect that can sometimes be seen as the pipeline detects different edges frame to frame. It's important to note that too much aggregation of data could result in lane changes becoming sluggish or entirely unresponsive, which could be dangerous if a lane turns sharply.
+A possible improvement would be to accumulate data over multiple frames as they are fed into the pipeline, and then to aggregate/average data. This would smooth out changes in the slope of the line being drawn over time, and would reduce the jitter effect that can sometimes be seen as the pipeline detects different edges frame to frame. It's important to note that too much aggregation of data could result in changes to how the line is drawn becoming sluggish or entirely unresponsive, which could be dangerous if a lane turns sharply.
 
 Another potential improvement could be to dynamically adjust the vertices of the region of interest based on the density of edges detected in the Canny edge detection step. This would allow the pipeline to handle a wider variety of images by detecting which portions of the image might contain features of interest.
